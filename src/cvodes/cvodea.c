@@ -2369,6 +2369,15 @@ static int CVAdataStore(CVodeMem cv_mem, CVckpntMem ck_mem)
     flag = CVode(cv_mem, ck_mem->ck_t1, ca_mem->ca_ytmp, &t, CV_ONE_STEP);
     if (flag < 0) { return (CV_FWD_FAIL); }
 
+    /* dt_mem holds ca_nsteps + 1 points; stop before writing past them */
+    if (i > ca_mem->ca_nsteps)
+    {
+      cvProcessError(cv_mem, CV_FWD_FAIL, __LINE__, __func__, __FILE__,
+                     MSGCV_REPLAY_STEPS, ck_mem->ck_t0, ck_mem->ck_t1,
+                     ca_mem->ca_nsteps);
+      return (CV_FWD_FAIL);
+    }
+
     dt_mem[i]->t = t;
     ca_mem->ca_IMstore(cv_mem, dt_mem[i]);
     i++;

@@ -1433,6 +1433,11 @@ void cvode_user_supplied_fn_table_destroy(void* ptr);
 #define MSGCV_BAD_WHICH  "Illegal value for which."
 #define MSGCV_NO_BCK     "No backward problems have been defined yet."
 #define MSGCV_NO_FWD     "Illegal attempt to call before calling CVodeF."
+#define MSGCV_REPLAY_STEPS                                                  \
+  "Recomputing the forward solution between the check points at " MSG_TIME  \
+  " and " MSG_TIME " took more than the %ld steps per check point given "   \
+  "to CVodeAdjInit. The forward problem, its linear solver included, must " \
+  "take the same steps when it is recomputed."
 #define MSGCV_BAD_TB0                                                       \
   "The initial time tB0 for problem %d is outside the interval over which " \
   "the forward problem was solved."

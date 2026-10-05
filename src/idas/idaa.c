@@ -2438,6 +2438,15 @@ static int IDAAdataStore(IDAMem IDA_mem, IDAckpntMem ck_mem)
                     IDAADJ_mem->ia_ypTmp, IDA_ONE_STEP);
     if (flag < 0) { return (IDA_FWD_FAIL); }
 
+    /* dt_mem holds ia_nsteps + 1 points; stop before writing past them */
+    if (i > IDAADJ_mem->ia_nsteps)
+    {
+      IDAProcessError(IDA_mem, IDA_FWD_FAIL, __LINE__, __func__, __FILE__,
+                      MSGAM_REPLAY_STEPS, ck_mem->ck_t0, ck_mem->ck_t1,
+                      IDAADJ_mem->ia_nsteps);
+      return (IDA_FWD_FAIL);
+    }
+
     dt_mem[i]->t = t;
     IDAADJ_mem->ia_storePnt(IDA_mem, dt_mem[i]);
 

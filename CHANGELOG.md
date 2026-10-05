@@ -14,6 +14,12 @@ useful when using the Fortran 2003 interfaces.
 Fixed a bug in `FindMAGMA.cmake` which didn't allow use of MAGMA versions with 
 multiple digits in an identifier.
 
+Fixed a bug in CVODES and IDAS where `CVodeB` and `IDASolveB` could write past
+the end of the stored interpolation data when recomputing the forward solution
+from a check point took more steps than the first pass. `CVodeB` and
+`IDASolveB` now return `CV_FWD_FAIL` and `IDA_FWD_FAIL`, respectively, with an
+error message ([Issue #49](https://github.com/llnl/sundials/issues/49)).
+
 ### Deprecation Notices
 
 ## Changes to SUNDIALS in release 7.9.0

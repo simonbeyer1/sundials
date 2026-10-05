@@ -3364,6 +3364,8 @@ static int IDAApolynomialGetY(IDAMem IDA_mem, sunrealtype t, N_Vector yy,
     base    = index;
     content = (IDApolynomialDataMem)(dt_mem[base]->content);
     order   = content->order;
+    /* the interval holds ia_np points; use no more of them */
+    if (order > IDAADJ_mem->ia_np - 1) { order = (int)(IDAADJ_mem->ia_np - 1); }
     if (index < order) { base += order - index; }
   }
   else
@@ -3371,6 +3373,7 @@ static int IDAApolynomialGetY(IDAMem IDA_mem, sunrealtype t, N_Vector yy,
     base    = index - 1;
     content = (IDApolynomialDataMem)(dt_mem[base]->content);
     order   = content->order;
+    if (order > IDAADJ_mem->ia_np - 1) { order = (int)(IDAADJ_mem->ia_np - 1); }
     if (IDAADJ_mem->ia_np - index > order)
     {
       base -= index + order - IDAADJ_mem->ia_np;

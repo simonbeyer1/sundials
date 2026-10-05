@@ -3336,6 +3336,8 @@ static int CVApolynomialGetY(CVodeMem cv_mem, sunrealtype t, N_Vector y,
     base    = index;
     content = (CVpolynomialDataMem)(dt_mem[base]->content);
     order   = content->order;
+    /* the interval holds ca_np points; use no more of them */
+    if (order > ca_mem->ca_np - 1) { order = (int)(ca_mem->ca_np - 1); }
     if (index < order) { base += order - index; }
   }
   else
@@ -3343,6 +3345,7 @@ static int CVApolynomialGetY(CVodeMem cv_mem, sunrealtype t, N_Vector y,
     base    = index - 1;
     content = (CVpolynomialDataMem)(dt_mem[base]->content);
     order   = content->order;
+    if (order > ca_mem->ca_np - 1) { order = (int)(ca_mem->ca_np - 1); }
     if (ca_mem->ca_np - index > order)
     {
       base -= index + order - ca_mem->ca_np;

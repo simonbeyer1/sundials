@@ -47,18 +47,18 @@ Backward integration ... (2 adjoint problems)
 
 Final Statistics for backward pb. 1
 -----------------------------------
- Number steps:   102
+ Number steps:   101
 
  Function evaluations:
-  f:          131
-  fQ:         111
+  f:          134
+  fQ:         110
  Error test failures:
-  netf:         1
+  netf:         2
   netfQ:        6
  Linear solver setups:
   nsetups:     25
  Nonlinear iterations:
-  nni:        128
+  nni:        131
  Convergence failures:
   ncfn:         0
 

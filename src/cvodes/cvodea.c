@@ -2598,7 +2598,13 @@ static int CVAfindIndex(CVodeMem cv_mem, sunrealtype t, long int* index,
       else { break; }
     }
 
-    if (*index == 0) { ca_mem->ca_ilast = 1; }
+    if (*index == 0)
+    {
+      /* GetY returns the stored point at index 0 without computing its
+         interpolation data, so the next call must not reuse the data of
+         another index */
+      ca_mem->ca_IMnewData = SUNTRUE;
+    }
     else { ca_mem->ca_ilast = *index; }
 
     if (*index == 0)

@@ -3624,7 +3624,13 @@ static int IDAAfindIndex(IDAMem ida_mem, sunrealtype t, long int* index,
       else { break; }
     }
 
-    if (*index == 0) { IDAADJ_mem->ia_ilast = 1; }
+    if (*index == 0)
+    {
+      /* GetY returns the stored point at index 0 without computing its
+         interpolation data, so the next call must not reuse the data of
+         another index */
+      IDAADJ_mem->ia_newData = SUNTRUE;
+    }
     else { IDAADJ_mem->ia_ilast = *index; }
 
     if (*index == 0)

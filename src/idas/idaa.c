@@ -752,7 +752,7 @@ int IDAInitB(void* ida_mem, int which, IDAResFnB resB, sunrealtype tB0,
   IDAMem IDA_mem;
   IDABMem IDAB_mem;
   void* ida_memB;
-  int flag;
+  int flag, sign;
 
   if (ida_mem == NULL)
   {
@@ -775,7 +775,9 @@ int IDAInitB(void* ida_mem, int which, IDAResFnB resB, sunrealtype tB0,
   IDAADJ_mem = IDA_mem->ida_adj_mem;
 
   /* Check the initial time for this backward problem against the adjoint data. */
-  if ((tB0 < IDAADJ_mem->ia_tinitial) || (tB0 > IDAADJ_mem->ia_tfinal))
+  sign = (IDAADJ_mem->ia_tfinal - IDAADJ_mem->ia_tinitial > ZERO) ? 1 : -1;
+  if ((sign * (tB0 - IDAADJ_mem->ia_tinitial) < ZERO) ||
+      (sign * (IDAADJ_mem->ia_tfinal - tB0) < ZERO))
   {
     IDAProcessError(IDA_mem, IDA_BAD_TB0, __LINE__, __func__, __FILE__,
                     MSGAM_BAD_TB0);
@@ -836,7 +838,7 @@ int IDAInitBS(void* ida_mem, int which, IDAResFnBS resS, sunrealtype tB0,
   IDAMem IDA_mem;
   IDABMem IDAB_mem;
   void* ida_memB;
-  int flag;
+  int flag, sign;
 
   if (ida_mem == NULL)
   {
@@ -859,7 +861,9 @@ int IDAInitBS(void* ida_mem, int which, IDAResFnBS resS, sunrealtype tB0,
   IDAADJ_mem = IDA_mem->ida_adj_mem;
 
   /* Check the initial time for this backward problem against the adjoint data. */
-  if ((tB0 < IDAADJ_mem->ia_tinitial) || (tB0 > IDAADJ_mem->ia_tfinal))
+  sign = (IDAADJ_mem->ia_tfinal - IDAADJ_mem->ia_tinitial > ZERO) ? 1 : -1;
+  if ((sign * (tB0 - IDAADJ_mem->ia_tinitial) < ZERO) ||
+      (sign * (IDAADJ_mem->ia_tfinal - tB0) < ZERO))
   {
     IDAProcessError(IDA_mem, IDA_BAD_TB0, __LINE__, __func__, __FILE__,
                     MSGAM_BAD_TB0);
@@ -928,7 +932,7 @@ int IDAReInitB(void* ida_mem, int which, sunrealtype tB0, N_Vector yyB0,
   IDAMem IDA_mem;
   IDABMem IDAB_mem;
   void* ida_memB;
-  int flag;
+  int flag, sign;
 
   if (ida_mem == NULL)
   {
@@ -951,7 +955,9 @@ int IDAReInitB(void* ida_mem, int which, sunrealtype tB0, N_Vector yyB0,
   IDAADJ_mem = IDA_mem->ida_adj_mem;
 
   /* Check the initial time for this backward problem against the adjoint data. */
-  if ((tB0 < IDAADJ_mem->ia_tinitial) || (tB0 > IDAADJ_mem->ia_tfinal))
+  sign = (IDAADJ_mem->ia_tfinal - IDAADJ_mem->ia_tinitial > ZERO) ? 1 : -1;
+  if ((sign * (tB0 - IDAADJ_mem->ia_tinitial) < ZERO) ||
+      (sign * (IDAADJ_mem->ia_tfinal - tB0) < ZERO))
   {
     IDAProcessError(IDA_mem, IDA_BAD_TB0, __LINE__, __func__, __FILE__,
                     MSGAM_BAD_TB0);
@@ -3312,7 +3318,7 @@ static int IDAApolynomialGetY(IDAMem IDA_mem, sunrealtype t, N_Vector yy,
   IDAdtpntMem* dt_mem;
   IDApolynomialDataMem content;
 
-  int flag, dir, order, i, j, is, NS, retval;
+  int flag, order, i, j, is, NS, retval;
   long int index, base;
   sunbooleantype newpoint;
   sunrealtype delt, factor, Psi, Psiprime;
@@ -3353,70 +3359,34 @@ static int IDAApolynomialGetY(IDAMem IDA_mem, sunrealtype t, N_Vector yy,
   /* Scaling factor */
   delt = SUNRabs(dt_mem[index]->t - dt_mem[index - 1]->t);
 
-  /* Find the direction of the forward integration */
-  dir = (IDAADJ_mem->ia_tfinal - IDAADJ_mem->ia_tinitial > ZERO) ? 1 : -1;
+  /* Establish the base point. The points in dt_mem are ordered along the
+     direction of the forward integration, whatever its sign. Limit the order
+     to the points of the current check point interval and modify the base if
+     there are not enough points before index for that order. */
 
-  /* Establish the base point depending on the integration direction.
-     Modify the base if there are not enough points for the current order */
-
-  if (dir == 1)
-  {
-    base    = index;
-    content = (IDApolynomialDataMem)(dt_mem[base]->content);
-    order   = content->order;
-    /* the interval holds ia_np points; use no more of them */
-    if (order > IDAADJ_mem->ia_np - 1) { order = (int)(IDAADJ_mem->ia_np - 1); }
-    if (index < order) { base += order - index; }
-  }
-  else
-  {
-    base    = index - 1;
-    content = (IDApolynomialDataMem)(dt_mem[base]->content);
-    order   = content->order;
-    if (order > IDAADJ_mem->ia_np - 1) { order = (int)(IDAADJ_mem->ia_np - 1); }
-    if (IDAADJ_mem->ia_np - index > order)
-    {
-      base -= index + order - IDAADJ_mem->ia_np;
-    }
-  }
+  base    = index;
+  content = (IDApolynomialDataMem)(dt_mem[base]->content);
+  order   = content->order;
+  if (order > IDAADJ_mem->ia_np - 1) { order = (int)(IDAADJ_mem->ia_np - 1); }
+  if (index < order) { base += order - index; }
 
   /* Recompute Y (divided differences for Newton polynomial) if needed */
 
   if (newpoint)
   {
     /* Store 0-th order DD */
-    if (dir == 1)
+    for (j = 0; j <= order; j++)
     {
-      for (j = 0; j <= order; j++)
-      {
-        IDAADJ_mem->ia_T[j] = dt_mem[base - j]->t;
-        content             = (IDApolynomialDataMem)(dt_mem[base - j]->content);
-        N_VScale(ONE, content->y, IDAADJ_mem->ia_Y[j]);
+      IDAADJ_mem->ia_T[j] = dt_mem[base - j]->t;
+      content             = (IDApolynomialDataMem)(dt_mem[base - j]->content);
+      N_VScale(ONE, content->y, IDAADJ_mem->ia_Y[j]);
 
-        if (NS > 0)
-        {
-          for (is = 0; is < NS; is++) { IDA_mem->ida_cvals[is] = ONE; }
-          retval = N_VScaleVectorArray(NS, IDA_mem->ida_cvals, content->yS,
-                                       IDAADJ_mem->ia_YS[j]);
-          if (retval != IDA_SUCCESS) { return (IDA_VECTOROP_ERR); }
-        }
-      }
-    }
-    else
-    {
-      for (j = 0; j <= order; j++)
+      if (NS > 0)
       {
-        IDAADJ_mem->ia_T[j] = dt_mem[base - 1 + j]->t;
-        content = (IDApolynomialDataMem)(dt_mem[base - 1 + j]->content);
-        N_VScale(ONE, content->y, IDAADJ_mem->ia_Y[j]);
-
-        if (NS > 0)
-        {
-          for (is = 0; is < NS; is++) { IDA_mem->ida_cvals[is] = ONE; }
-          retval = N_VScaleVectorArray(NS, IDA_mem->ida_cvals, content->yS,
-                                       IDAADJ_mem->ia_YS[j]);
-          if (retval != IDA_SUCCESS) { return (IDA_VECTOROP_ERR); }
-        }
+        for (is = 0; is < NS; is++) { IDA_mem->ida_cvals[is] = ONE; }
+        retval = N_VScaleVectorArray(NS, IDA_mem->ida_cvals, content->yS,
+                                     IDAADJ_mem->ia_YS[j]);
+        if (retval != IDA_SUCCESS) { return (IDA_VECTOROP_ERR); }
       }
     }
 

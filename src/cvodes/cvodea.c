@@ -3285,7 +3285,7 @@ static int CVApolynomialGetY(CVodeMem cv_mem, sunrealtype t, N_Vector y,
   CVdtpntMem* dt_mem;
   CVpolynomialDataMem content;
 
-  int flag, dir, order, i, j, is, NS, retval;
+  int flag, order, i, j, is, NS, retval;
   long int index, base;
   sunbooleantype newpoint;
   sunrealtype dt, factor;
@@ -3324,70 +3324,34 @@ static int CVApolynomialGetY(CVodeMem cv_mem, sunrealtype t, N_Vector y,
 
   dt = SUNRabs(dt_mem[index]->t - dt_mem[index - 1]->t);
 
-  /* Find the direction of the forward integration */
+  /* Establish the base point. The points in dt_mem are ordered along the
+     direction of the forward integration, whatever its sign. Limit the order
+     to the points of the current check point interval and modify the base if
+     there are not enough points before index for that order. */
 
-  dir = (ca_mem->ca_tfinal - ca_mem->ca_tinitial > ZERO) ? 1 : -1;
-
-  /* Establish the base point depending on the integration direction.
-     Modify the base if there are not enough points for the current order */
-
-  if (dir == 1)
-  {
-    base    = index;
-    content = (CVpolynomialDataMem)(dt_mem[base]->content);
-    order   = content->order;
-    /* the interval holds ca_np points; use no more of them */
-    if (order > ca_mem->ca_np - 1) { order = (int)(ca_mem->ca_np - 1); }
-    if (index < order) { base += order - index; }
-  }
-  else
-  {
-    base    = index - 1;
-    content = (CVpolynomialDataMem)(dt_mem[base]->content);
-    order   = content->order;
-    if (order > ca_mem->ca_np - 1) { order = (int)(ca_mem->ca_np - 1); }
-    if (ca_mem->ca_np - index > order)
-    {
-      base -= index + order - ca_mem->ca_np;
-    }
-  }
+  base    = index;
+  content = (CVpolynomialDataMem)(dt_mem[base]->content);
+  order   = content->order;
+  if (order > ca_mem->ca_np - 1) { order = (int)(ca_mem->ca_np - 1); }
+  if (index < order) { base += order - index; }
 
   /* Recompute Y (divided differences for Newton polynomial) if needed */
 
   if (newpoint)
   {
     /* Store 0-th order DD */
-    if (dir == 1)
+    for (j = 0; j <= order; j++)
     {
-      for (j = 0; j <= order; j++)
-      {
-        ca_mem->ca_T[j] = dt_mem[base - j]->t;
-        content         = (CVpolynomialDataMem)(dt_mem[base - j]->content);
-        N_VScale(ONE, content->y, ca_mem->ca_Y[j]);
+      ca_mem->ca_T[j] = dt_mem[base - j]->t;
+      content         = (CVpolynomialDataMem)(dt_mem[base - j]->content);
+      N_VScale(ONE, content->y, ca_mem->ca_Y[j]);
 
-        if (NS > 0)
-        {
-          for (is = 0; is < NS; is++) { cv_mem->cv_cvals[is] = ONE; }
-          retval = N_VScaleVectorArray(NS, cv_mem->cv_cvals, content->yS,
-                                       ca_mem->ca_YS[j]);
-          if (retval != CV_SUCCESS) { return (CV_VECTOROP_ERR); }
-        }
-      }
-    }
-    else
-    {
-      for (j = 0; j <= order; j++)
+      if (NS > 0)
       {
-        ca_mem->ca_T[j] = dt_mem[base - 1 + j]->t;
-        content         = (CVpolynomialDataMem)(dt_mem[base - 1 + j]->content);
-        N_VScale(ONE, content->y, ca_mem->ca_Y[j]);
-        if (NS > 0)
-        {
-          for (is = 0; is < NS; is++) { cv_mem->cv_cvals[is] = ONE; }
-          retval = N_VScaleVectorArray(NS, cv_mem->cv_cvals, content->yS,
-                                       ca_mem->ca_YS[j]);
-          if (retval != CV_SUCCESS) { return (CV_VECTOROP_ERR); }
-        }
+        for (is = 0; is < NS; is++) { cv_mem->cv_cvals[is] = ONE; }
+        retval = N_VScaleVectorArray(NS, cv_mem->cv_cvals, content->yS,
+                                     ca_mem->ca_YS[j]);
+        if (retval != CV_SUCCESS) { return (CV_VECTOROP_ERR); }
       }
     }
 
